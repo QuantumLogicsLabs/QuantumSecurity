@@ -1,0 +1,27 @@
+# Secret-scanning rules shared by every QuantumLogicsLabs project.
+# Extends the built-in Gitleaks rule set with the leaks our stack produces most often.
+title = "QuantumLogicsLabs secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "quantum-mongodb-connection-string"
+description = "MongoDB connection string with an embedded username and password"
+# The character classes leave out < > $ { } so that <password> and ${DB_PASS} placeholders do not match.
+regex = '''mongodb(?:\+srv)?://[^\s:/@'"<>${}]+:([^\s:/@'"<>${}]+)@[^\s'"]+'''
+keywords = ["mongodb://", "mongodb+srv://"]
+tags = ["database", "mongodb"]
+
+  [[rules.allowlists]]
+  description = "Documentation placeholders such as user:password@"
+  regexTarget = "match"
+  regexes = [
+    '''(?i)://(?:user(?:name)?|admin|root|test|example|your[_-]?\w*):(?:pass(?:word)?|example|changeme|secret|test|your[_-]?\w*)@''',
+  ]
+
+[[rules]]
+id = "quantum-committed-env-file"
+description = "Environment file committed to the repository; these normally hold real credentials"
+path = '''(?:^|/)\.env(?:\.(?:local|dev|development|prod|production|staging|test))?$'''
+tags = ["env", "file"]

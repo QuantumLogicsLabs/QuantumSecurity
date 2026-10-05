@@ -1,0 +1,65 @@
+# Reusable security scan. Projects call this workflow instead of copying it,
+# so a change made here reaches every project on its next run.
+# See docs/adoption.md for the few lines a project needs.
+name: Security scan
+
+on:
+  workflow_call:
+    inputs:
+      enforce:
+        description: Fail the job when a scan reports a blocking finding. Set to false to report only.
+        type: boolean
+        default: true
+      config-ref:
+        description: Branch, tag, or commit of QuantumSecurity to take the scan scripts and rules from.
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: ${{ matrix.scan }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scan: secrets
+            tool: gitleaks
+    steps:
+      - name: Check out project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: project
+          # Full history: a deleted secret is still in the commits that came before.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out QuantumSecurity
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: QuantumLogicsLabs/QuantumSecurity
+          ref: ${{ inputs.config-ref }}
+          path: quantum-security
+          persist-credentials: false
+
+      - name: Install ${{ matrix.tool }}
+        run: bash quantum-security/scripts/install-tools.sh "${{ matrix.tool }}"
+
+      - name: Run ${{ matrix.scan }} scan
+        env:
+          ENFORCE: ${{ inputs.enforce }}
+          REPORT_DIR: ${{ github.workspace }}/reports
+        run: bash quantum-security/scripts/ci-run.sh "${{ matrix.scan }}" project
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-${{ matrix.scan }}
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 14
