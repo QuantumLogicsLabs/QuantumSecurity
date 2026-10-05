@@ -29,6 +29,8 @@ jobs:
         include:
           - scan: secrets
             tool: gitleaks
+          - scan: dependencies
+            tool: osv-scanner
     steps:
       - name: Check out project
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

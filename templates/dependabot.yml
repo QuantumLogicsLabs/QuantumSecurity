@@ -1,0 +1,32 @@
+# Copy to .github/dependabot.yml in your project.
+# Dependabot opens pull requests that upgrade vulnerable or outdated dependencies,
+# which is how the findings from the dependency scan get fixed with little effort.
+#
+# List only the folders that exist in your project and contain the named manifest.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /frontend
+      - /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for all minor and patch upgrades instead of one per package.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Remove this block if the project has no Python code.
+  - package-ecosystem: pip
+    directories:
+      - /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Keeps the actions used by your workflows up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
