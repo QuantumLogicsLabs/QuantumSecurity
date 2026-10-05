@@ -1,0 +1,84 @@
+# Reusable dynamic scan. Runs the OWASP ZAP baseline scan against a running
+# copy of the application and reports what an outside visitor can see:
+# missing security headers, weak cookies, open CORS, leaked error details.
+#
+# The baseline scan only browses the site and reads the responses. It does not
+# send attack payloads, so it is safe to point at a staging site.
+# Only scan applications that QuantumLogicsLabs owns.
+name: Dynamic scan
+
+on:
+  workflow_call:
+    inputs:
+      target-url:
+        description: Address of the running application, for example http://localhost:3000 or a staging URL.
+        type: string
+        required: true
+      start-command:
+        description: >-
+          Shell command that starts the application inside the runner, for example
+          "docker compose up -d". Leave empty when target-url is already reachable.
+        type: string
+        default: ""
+      enforce:
+        description: Fail the job when ZAP reports a rule marked FAIL in configs/zap/rules.tsv. Set to false to report only.
+        type: boolean
+        default: true
+      config-ref:
+        description: Branch, tag, or commit of QuantumSecurity to take the ZAP rules from.
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out QuantumSecurity
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: QuantumLogicsLabs/QuantumSecurity
+          ref: ${{ inputs.config-ref }}
+          path: .quantum-security
+          persist-credentials: false
+
+      - name: Start application
+        if: inputs.start-command != ''
+        env:
+          START_COMMAND: ${{ inputs.start-command }}
+        run: bash -c "$START_COMMAND"
+
+      - name: Wait for application
+        env:
+          TARGET_URL: ${{ inputs.target-url }}
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --output /dev/null --max-time 5 "$TARGET_URL"; then
+              echo "$TARGET_URL is responding."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$TARGET_URL did not respond within 5 minutes."
+          exit 1
+
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: ${{ inputs.target-url }}
+          rules_file_name: .quantum-security/configs/zap/rules.tsv
+          # -j also crawls pages built by JavaScript (React and similar).
+          # -I keeps warnings from failing the scan, so only rules marked FAIL block.
+          cmd_options: -j -I
+          fail_action: ${{ inputs.enforce }}
+          allow_issue_writing: false
+          artifact_name: security-dast

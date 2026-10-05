@@ -38,3 +38,13 @@ jobs:
       enforce: true
       # Test the scripts and rules from this commit, not the ones already on main.
       config-ref: ${{ github.sha }}
+
+  dast:
+    name: Dynamic scan
+    uses: ./.github/workflows/dast.yml
+    with:
+      # A static file server is enough to prove the scan starts, crawls, and reports.
+      target-url: http://localhost:8080
+      start-command: nohup python3 -m http.server 8080 > /dev/null 2>&1 &
+      enforce: false
+      config-ref: ${{ github.sha }}
