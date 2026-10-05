@@ -1,0 +1,24 @@
+# Copy to .github/workflows/dast.yml in your project, then set target-url and start-command.
+# Scans a running copy of the application with OWASP ZAP.
+name: Dynamic scan
+
+on:
+  schedule:
+    # Mondays 05:00 UTC.
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dast:
+    uses: QuantumLogicsLabs/QuantumSecurity/.github/workflows/dast.yml@main
+    with:
+      # Where the application answers once it is running.
+      target-url: http://localhost:3000
+      # How to start it inside the runner. Delete this line if target-url is a
+      # staging site that is already running.
+      start-command: docker compose up -d
+      # false = report only. Change to true once the existing findings are fixed.
+      enforce: false
