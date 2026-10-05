@@ -1,0 +1,36 @@
+# Rules for the mistakes AI-generated FastAPI / Flask code makes most often.
+# They add to the public Semgrep rule packs; they do not replace them.
+# Every rule has cases in ../tests/python.py. Run the rule tests after changing one (see README).
+#
+# severity ERROR blocks a pull request. WARNING is reported but does not block.
+rules:
+  - id: quantum-python-secret-env-fallback
+    languages: [python]
+    severity: ERROR
+    message: >-
+      The environment variable `$VAR` falls back to a hardcoded value. If it is ever missing
+      in production, the app silently runs with a secret that anyone can read in the source
+      code. Read it with os.environ["$VAR"] so the app stops at startup when it is not set.
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+    patterns:
+      - pattern-either:
+          - pattern: os.getenv("$VAR", "...")
+          - pattern: os.environ.get("$VAR", "...")
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(secret|password|passwd|token|api_?key|private_?key).*
+
+  - id: quantum-fastapi-cors-allow-all
+    languages: [python]
+    severity: WARNING
+    message: >-
+      CORS is open to every origin, which lets any website call this API from a visitor's
+      browser. List the origins that are allowed to call it.
+    metadata:
+      category: security
+      cwe: "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"
+      owasp: "A05:2021 - Security Misconfiguration"
+    pattern: $APP.add_middleware(CORSMiddleware, ..., allow_origins=["*"], ...)

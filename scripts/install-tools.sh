@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs pinned scanner versions on a Linux x64 machine (the GitHub-hosted runners).
-# Every download is checked against a known checksum before it is installed.
+# Binary downloads are checked against a known checksum before they are installed.
 # Usage: install-tools.sh <tool> [<tool> ...]
 set -euo pipefail
 
@@ -9,6 +9,7 @@ GITLEAKS_VERSION="8.30.1"
 GITLEAKS_SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
 OSV_SCANNER_VERSION="2.6.0"
 OSV_SCANNER_SHA256="ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108"
+SEMGREP_VERSION="1.179.0"
 
 BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
 mkdir -p "$BIN_DIR"
@@ -33,10 +34,16 @@ install_osv_scanner() {
   install -m 0755 "$tmp/osv-scanner" "$BIN_DIR/osv-scanner"
 }
 
+install_semgrep() {
+  # Semgrep is a Python package; pipx is preinstalled on GitHub-hosted runners.
+  pipx install "semgrep==${SEMGREP_VERSION}"
+}
+
 for tool in "$@"; do
   case "$tool" in
     gitleaks) install_gitleaks ;;
     osv-scanner) install_osv_scanner ;;
+    semgrep) install_semgrep ;;
     *) echo "install-tools.sh: unknown tool '$tool'" >&2; exit 2 ;;
   esac
   echo "Installed $tool"
