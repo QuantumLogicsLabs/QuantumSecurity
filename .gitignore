@@ -1,0 +1,21 @@
+# Scan output
+reports/
+*.sarif
+gitleaks-report.*
+osv-report.*
+semgrep-report.*
+zap-report.*
+
+# Local environment
+.env
+.env.*
+!.env.example
+node_modules/
+.venv/
+__pycache__/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
