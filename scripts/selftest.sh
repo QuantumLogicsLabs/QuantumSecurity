@@ -80,11 +80,6 @@ JS
 commit_all "$good" "Initial commit"
 
 # --- Checks ------------------------------------------------------------------
-expect 0 "custom Semgrep rules are valid" \
-  semgrep scan --validate --metrics off --config "$root/configs/semgrep/rules"
-expect 0 "custom Semgrep rules pass their test cases" \
-  semgrep scan --test --config "$root/configs/semgrep/rules" "$root/configs/semgrep/tests"
-
 expect 1 "secrets scan flags a secret that was committed and later deleted" \
   bash "$root/scripts/scan-secrets.sh" "$bad"
 expect 1 "dependency scan flags a package with a high-severity vulnerability" \
@@ -100,6 +95,17 @@ expect 1 "enforce mode fails the job on a blocking finding" \
   env ENFORCE=true bash "$root/scripts/ci-run.sh" secrets "$bad"
 expect 0 "report-only mode reports the finding without failing the job" \
   env ENFORCE=false bash "$root/scripts/ci-run.sh" secrets "$bad"
+
+# The local script runs the scanners from their Docker images, so it is checked separately.
+if command -v pwsh > /dev/null && command -v docker > /dev/null; then
+  local_scan=(pwsh -NoProfile -File "$root/scripts/local-scan.ps1")
+  expect 1 "local-scan.ps1 flags the planted secret" "${local_scan[@]}" -Project "$bad" -Scan secrets
+  expect 1 "local-scan.ps1 flags the vulnerable package" "${local_scan[@]}" -Project "$bad" -Scan dependencies
+  expect 1 "local-scan.ps1 flags the insecure code" "${local_scan[@]}" -Project "$bad" -Scan code
+  expect 0 "local-scan.ps1 passes a clean project" "${local_scan[@]}" -Project "$good"
+else
+  echo "skip  local-scan.ps1 checks (they need pwsh and docker)"
+fi
 
 echo
 if [ "$failures" -gt 0 ]; then

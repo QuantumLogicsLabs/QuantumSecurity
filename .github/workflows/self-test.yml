@@ -28,6 +28,9 @@ jobs:
       - name: Install scanners
         run: bash scripts/install-tools.sh gitleaks osv-scanner semgrep
 
+      - name: Test custom Semgrep rules
+        run: semgrep scan --test --config configs/semgrep/rules configs/semgrep/tests
+
       - name: Run self-test
         run: bash scripts/selftest.sh
 
