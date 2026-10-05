@@ -112,7 +112,7 @@ rules:
           - pattern: $JWT.sign($PAYLOAD, $SECRET)
           - patterns:
               - pattern: $JWT.sign($PAYLOAD, $SECRET, {...})
-              - pattern-not: $JWT.sign($PAYLOAD, $SECRET, {..., expiresIn: $EXPIRY, ...})
+              - pattern-not: '$JWT.sign($PAYLOAD, $SECRET, {..., expiresIn: $EXPIRY, ...})'
       - metavariable-regex:
           metavariable: $JWT
           regex: ^(jwt|jsonwebtoken)$
