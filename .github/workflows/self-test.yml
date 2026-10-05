@@ -1,0 +1,40 @@
+# Checks this repository's own tooling: the scans must catch planted problems,
+# and the reusable workflow must run cleanly end to end.
+name: Self-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays 03:00 UTC. Catches a scanner or rule-pack change that breaks the pipeline.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detection:
+    name: Scans catch planted problems
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install scanners
+        run: bash scripts/install-tools.sh gitleaks osv-scanner semgrep
+
+      - name: Run self-test
+        run: bash scripts/selftest.sh
+
+  pipeline:
+    name: Pipeline
+    uses: ./.github/workflows/security.yml
+    with:
+      enforce: true
+      # Test the scripts and rules from this commit, not the ones already on main.
+      config-ref: ${{ github.sha }}
